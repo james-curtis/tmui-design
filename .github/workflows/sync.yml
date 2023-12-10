@@ -1,0 +1,52 @@
+name: Sync with Gitee
+
+on:
+  schedule:
+    - cron: "0 0 * * 5"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Git
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git remote add gitee https://gitee.com/LYTB/tmui-design.git
+
+      - name: Pull from Gitee
+        run: |
+          git pull gitee master --rebase
+
+      - name: Push to GitHub
+        run: |
+          git push origin main --force
+        
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - id: check
+        uses: EndBug/version-check@v2
+        with:
+          file-name: src/tmui/package.json
+          file-url: https://unpkg.com/@cataract6545/tmui@latest/package.json
+          static-checking: localIsNew
+          
+      - name: publish
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          sed -i 's#displayName": "tm-vuetify-3#name": "@cataract6545/tmui#' package.json
+          npm publish --access=public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: src/tmui
+
+        
+      
